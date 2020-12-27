@@ -1,6 +1,7 @@
 #Cary Hooper
 #Advent of Code
 ##Day 7 Part 1
+##Note - this code is unfinished.   Doesn't result in the correct answer.
 
 def parse_rules(filename):
 	#Parses rules file, returns dict with all the rules for each type of bag.
