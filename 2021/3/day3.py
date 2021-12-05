@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#Advent of Code Day 2
+#Advent of Code Day 3
 import sys
 sys.path.append("..")
 
