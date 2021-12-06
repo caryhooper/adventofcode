@@ -1,5 +1,8 @@
 import sys
 import operator
+import widgets.depthfinder
+import math
+import numpy
 
 class Diagnostics:
 	#Note: parse_diagnostics(input_file) must be called to diagnose the sub
@@ -13,6 +16,11 @@ class Diagnostics:
 		self.life_support_rating = 0
 		self.oxygen_rating = 0
 		self.co2_rating = 0
+		self.depthfinder = widgets.depthfinder.Depthfinder()
+
+	def map_vents(self,input_coords, square_only=False):
+		self.vent_mapper = Vent_Mapper()
+		self.vent_mapper.build_map(input_coords, square_only=square_only)
 		pass
 
 	def bitstring_to_int(self,bitstring):
@@ -153,3 +161,125 @@ class Diagnostics:
 			self.oxygen_rating = gas_list[0]
 		else:
 			self.co2_rating = gas_list[0]
+
+class Vent_Mapper:
+	def __init__(self):
+		self.vents = list()
+		self.grid = ['0'] #Seed val for map attr
+		pass
+
+	def build_map(self,input_coords,square_only):
+		#input_coords in the form x1,y1 -> x2,y2
+		for line in input_coords:
+			if '->' in line:
+				start,_,end = line.strip().split(' ')
+				#Saving as a list of double tuples
+				x1,y1 = start.split(',')
+				x2,y2 = end.split(',')
+				self.vents.append(Vent(x1,y1,x2,y2))
+		#Find Greatest x and Greatest y
+		x,y = self.find_greatest_xy()
+		#Initialize Grid
+		self.grid = numpy.array([[0] * (x+1) ] * (y+1), numpy.int32)
+		self.x_max = x+1
+		self.y_max = y+1
+		self.draw_square_vents()
+		if not square_only:
+			self.draw_diagonal_vents()
+
+	def find_greatest_xy(self):
+		greatest_x = 0
+		greatest_y = 0
+		for vent in self.vents:
+			for x in [vent.x1,vent.x2]:
+				if x > greatest_x:
+					greatest_x = x
+			for y in [vent.y1,vent.y2]:
+				if y > greatest_y:
+					greatest_y = y
+		return greatest_x,greatest_y
+
+	def draw_diagonal_vents(self):
+		for vent in self.vents:
+			if vent.square == False:
+				#Prepare the grid to be updated by re-arranging the starts/ends.  If 
+				#	optimized, these should be in the vent class, probably.  
+				if vent.slope > 0:
+					#Slope goes upwards (add one to x1,y1 until we reach the max)
+					if vent.x1 > vent.x2:
+						start_x, start_y, end_x, end_y = vent.x2, vent.y2, vent.x1, vent.y1
+					else:
+						start_x, start_y, end_x, end_y = vent.x1, vent.y1, vent.x2, vent.y2		
+				else:
+					#Slope goes downwards
+					if vent.x1 > vent.x2:
+						start_x, start_y, end_x, end_y = vent.x2, vent.y2, vent.x1, vent.y1
+					else:
+						start_x, start_y, end_x, end_y = vent.x1, vent.y1, vent.x2, vent.y2
+				# print(f"{vent.slope}: ({start_x},{start_y}) to ({end_x},{end_y})")
+				#Actual updating of the grid
+				for i in range(0,end_x - start_x + 1):
+					
+					next_x = start_x + i
+					next_y = start_y + (i * int(vent.slope))
+					self.grid[next_x,next_y] += 1
+		print("Diagonal vents drawn.")
+	
+
+	def draw_square_vents(self):
+		#Determine if vent is square (horiz or vert)
+		#A vent is square if x1 = x2 OR y1 = y2
+		for vent in self.vents:
+			# print(f"Drawing vent ({vent.x1},{vent.y1}),({vent.x2},{vent.y2})")
+			#Draw on map if square
+			if vent.square:
+				if vent.slope == 0:
+					#If 0, y1 == y2
+					if vent.x2 > vent.x1:
+						big,little = vent.x2, vent.x1
+					if vent.x1 > vent.x2:
+						big,little = vent.x1, vent.x2
+					for i in range(0,big - little + 1):
+						x_val = little + i
+						y_val = vent.y1
+						self.grid[x_val,y_val] += 1
+				if vent.slope == 'inf':
+					#If inf, x1 == x2
+					if vent.y2 > vent.y1:
+						big,little = vent.y2, vent.y1
+					if vent.y1 > vent.y2:
+						big,little = vent.y1, vent.y2
+					for i in range(0,big - little + 1):
+						x_val = vent.x1
+						y_val = little + i
+						self.grid[x_val,y_val] += 1
+		print(f"Square vents drawn.")
+
+	def calc_overlapping_vents(self):
+		overlaps = 0
+		for row in self.grid:
+			for x in row:
+				if int(x) > 1:
+					overlaps += 1
+		return overlaps
+		
+class Vent:
+	def __init__(self,x1,y1,x2,y2):
+		# start,end = coords
+		self.x1 = int(x1)
+		self.y1 = int(y1)
+		self.x2 = int(x2)
+		self.y2 = int(y2)
+		self.slope = self.calc_slope()
+		if self.slope == 0 or self.slope == 'inf':
+			self.square = True
+		else:
+			self.square = False
+	def calc_slope(self):
+		# print(f"{self.x1},{self.y1}  {self.x2},{self.y2}")
+		# print(f"x1 of type {type(self.x1)}")
+		try:
+			slope = (self.y2 - self.y1) / (self.x2 - self.x1)
+		except:
+			slope = 'inf'
+		return slope
