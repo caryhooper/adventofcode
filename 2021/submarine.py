@@ -1,4 +1,3 @@
-
 import widgets.depthfinder
 import widgets.navigator
 import widgets.diagnostics

@@ -1,3 +1,4 @@
+from os import closerange
 import numpy,sys
 
 class Navigator:
@@ -14,6 +15,7 @@ class Navigator:
 		self.chunk_end = list(self.syntax_key.values())
 		self.first_error_chars = list()
 		self.octopus_navigator = OctopusNavigator()
+		self.cave_graph = CaveGraph()
 
 	def parse_movement_commands(self,text_list):
 		#Input a text list of newline-separated commands and \
@@ -505,3 +507,99 @@ class OctopusNavigator:
 			neighbors.add((x + i,y + j))
 		neighbors.discard((x,y))
 		return neighbors
+
+class CaveGraph:
+	def __init__(self):
+		self.graph = dict() #Adjacency graph is a dict which has keys of start points and
+		#	values are a list of end points.  Basically a bunch of nodes and edges
+		#initialize counters and constants.   Don't need self.big_caves, but may need later
+		self.small_caves = list()
+		self.big_caves = list()
+		self.path_count = 0
+
+	def load_graph_data(self,lines):
+		#Input a list of newline-separated edgest
+		#Load vectors into adjacency graph
+		for line in lines:
+			line = line.strip()
+			start,end = line.split('-')
+			#If not already in the graph, add as a key and initialize to set()
+			if start not in self.graph.keys():
+				self.graph[start] = set()
+			if end not in self.graph.keys():
+				self.graph[end] = set()
+			
+			#These paths should be bi-directional
+			self.graph[start].add(end)
+			self.graph[end].add(start)
+
+		for i in self.graph.keys():
+			#Sorting each so they're in the same order when debugging
+			self.graph[i] = list(self.graph[i])
+			self.graph[i].sort()
+		
+		#Add all the things to big_caves and small_caves attributes
+		[self.big_caves.append(i) for i in self.graph.keys() if i.isupper()]
+		[self.small_caves.append(i) for i in self.graph.keys() if i.islower()]
+		
+	def walk_next_path(self,current_path = ["start"],can_visit_a_small_cave_twice=False):
+		#This function does the heavy lifting. 
+		#Recursive function that walks the graph, given a "current_path", determine
+		#   (1) Has the path ended?
+		#   (2) Have we broken any of the rules?
+		#   (3) Can we continue adding to the path?
+
+		#Track the last node to determine where we can go
+		last_node = current_path[-1]
+		#loop through all nodes that we can go
+		for next_node in self.graph[last_node]:
+			#Add the potential node to the path
+			current_path.append(next_node)
+			if next_node == "end":
+				#We've reached the exit.  Count as valid path
+				self.path_count += 1
+				current_path.pop()
+				continue
+			elif next_node == "start":
+				#We're back at the start.  This is illegal.  Pop/continue
+				current_path.pop()
+				continue
+			elif next_node in self.small_caves and next_node in current_path[:-1]:
+				#We reached a small cave where we've been before.
+				if can_visit_a_small_cave_twice:
+					#This is true when its not necessarily illegal to have been to a small cave twice
+					#This function returns all repeat small caves in the path ["c","c"]
+					twice_caves = self.caves_already_visited_twice(current_path)
+					#If more than 2 (3 or 4) we have three small or two and two small (both illegal)
+					if len(twice_caves) > 2:
+						#Pop/Continue
+						current_path.pop()
+						continue
+					#If not more than one we can add to the path.  
+					else:
+						#Walk the path and keep the rules the same.
+						self.walk_next_path(current_path, can_visit_a_small_cave_twice=can_visit_a_small_cave_twice)
+						current_path.pop()
+						continue
+				else:
+					#Case for when we've reached a dead-end small cave (already visited)
+					current_path.pop()
+					continue
+			else:
+				# Here, we can add to the current path and recurse further, keeping the rules the same
+				self.walk_next_path(current_path, can_visit_a_small_cave_twice=can_visit_a_small_cave_twice)
+				current_path.pop()
+				continue
+			
+	def caves_already_visited_twice(self,current_path):
+		#Helper stub to return a list of repeated small caves within an array
+		repeated_small_caves = list()
+		for cave in current_path:
+			if cave in self.small_caves:
+				#Check if cave is small
+				#Only append to repeated_small_caves if the count is greater than 1
+				count = sum(1 for i in current_path if i == cave)
+				if count > 1:
+					repeated_small_caves.append(cave)
+		return repeated_small_caves
+
