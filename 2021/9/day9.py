@@ -20,6 +20,7 @@ print(f"The cave risk score is {risk}")
 #1304576 too high
 #846846 too low
 #874000 too low
+#1280496 is just right
 basin_sets = list(sub.navigator.basins.values())
 product = 1
 # for i in range(0,3):

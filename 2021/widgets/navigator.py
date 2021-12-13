@@ -16,6 +16,7 @@ class Navigator:
 		self.first_error_chars = list()
 		self.octopus_navigator = OctopusNavigator()
 		self.cave_graph = CaveGraph()
+		self.thermal_camera = ThermalCamera()
 
 	def parse_movement_commands(self,text_list):
 		#Input a text list of newline-separated commands and \
@@ -603,3 +604,133 @@ class CaveGraph:
 					repeated_small_caves.append(cave)
 		return repeated_small_caves
 
+class ThermalCamera:
+	def __init__(self):
+		self.dots = list()
+		self.folds = list()
+
+	def activate(self,lines):
+		#Initialize Data Structures and do folds
+		self.parse_manual(lines)
+		#Finds the max fold value and doubles and adds 1 for max coords
+		self.x_max = max([j for i,j in self.folds if i == 'x']) * 2 + 1
+		self.y_max = max([j for i,j in self.folds if i == 'y']) * 2 + 1
+		#Initialize numpy array with all 0s
+		self.grid = numpy.array([[0] *  self.y_max] * self.x_max,numpy.int32)
+		#For each dot, make the (x,y) value equal to 1
+		for dot in self.dots:
+			self.grid[dot] = 1
+
+	def parse_manual(self,lines):
+		#Parse through each line
+		for line in lines:
+			line = line.strip()
+			if "fold along" in line:
+				#Track folds as a tuple ("x",12) in self.folds
+				axis,fold_val = line.split(" ")[2].split('=')
+				self.folds.append((axis,int(fold_val)))
+			elif ',' in line:
+				#Track dots as an (x,y) tuple in self.dots
+				x,y = line.split(',')
+				self.dots.append((int(x),int(y)))
+			else:
+				#Newline or EOF
+				pass
+
+	def do_folds(self, fold_count=None):
+		#Helper function to determine which fold.  
+		for axis,fold_val in self.folds:
+			# print(f"Folding across the {axis}={fold_val} axis")
+			# print(f"Currently the grid is {self.grid.shape} with x_max of {self.x_max} and y_max of {self.y_max}")
+			#Fold over x=4 means vertical fold (fold left)
+			if axis == "x":
+				temp_grid = self.fold_left(fold_val)
+			#Fold over y=4 means horiz fold (fold up)
+			elif axis == "y":
+				temp_grid = self.fold_up(fold_val)
+			#Case not reached during testing
+			else:
+				print(f"Error: unexpected value for {axis} in folds: {folds}")
+				sys.exit(1)
+			
+			#Assign temp_grid to self.grid and calculate x_max and y_max
+			self.grid = temp_grid
+			self.x_max,self.y_max = self.grid.shape
+
+			#logic to stop folding after X folds (Part 1)
+			if fold_count:
+				fold_count -= 1
+				if fold_count == 0:
+					break
+			
+			
+
+	def fold_up(self, axis):
+		#Folding up means y_max gets smaller and x_max stays the same
+		#Create a temp_grid object to store results of fold (temp_grid.shape <= self.grid.shape)
+		temp_grid = self.grid[:,0:axis]	
+		#Iterate through all x,y in self.grid
+		for x in range(0,self.x_max):
+			for y in range(0,self.y_max):
+				#If coord is below fold
+				if y > axis:
+					#take the difference between the max - 1 and y
+					new_y = self.y_max - y -1
+					if new_y < 0:
+						#Error handling
+						continue
+					else:
+						#OR the current position and the new position.  If either is 1,
+						#    temp_grid[x,new_y] will also be one
+						temp_grid[x,new_y] = (self.grid[x,y] or self.grid[x,new_y])
+				elif y == axis:
+					#Skip all values for y that fall on the fold
+					continue
+				else:
+					#Otherwise, just move the val from self.grid to temp_grid
+					temp_grid[x,y] = self.grid[x,y]
+					#temp_grid[x,y] = (self.grid[x,y] or temp_grid[x,y])
+
+		return temp_grid
+
+	def fold_left(self, axis):
+		#Folding left means x_max gets smaller and y_max stays the same
+		#Create a temp_grid object to store results of fold (temp_grid.shape <= self.grid.shape)
+		temp_grid = self.grid[0:axis,:]	
+		#Iterate through all x,y in self.grid
+		for x in range(0,self.x_max):
+			for y in range(0,self.y_max):
+				#If coord is right of fold
+				if x > axis:
+					#New x is the difference between total size minus one and x
+					new_x = self.x_max - x -1
+					if new_x < 0:
+						#Error handling
+						continue
+					else:						
+						#OR the current position and the new position.  If either is 1,
+						#    temp_grid[new_x,y] will also be one
+						temp_grid[new_x,y] = (self.grid[x,y] or self.grid[new_x,y])
+				elif x == axis:
+					#Skip all values for y that fall on the fold
+					continue
+				else:
+					#Otherwise, just move the val from self.grid to temp_grid
+					temp_grid[x,y] = self.grid[x,y]
+		return temp_grid
+
+	def count_dots(self):
+		return self.grid.sum()
+
+	def print(self):
+		#Iterate through all coords (x,y) in self.grid
+		#Makes final solution more readable
+		for y in range(0,self.y_max):
+			for x in range(0,self.x_max):
+				#If val is 1, print in black on black
+				if self.grid[x,y] == 1:
+					print("\033[0;30;40m ",end='')
+				#Else val is 0, print in white on white
+				else:
+					print("\033[0;37;47m ",end='')
+			print("\033[0;30;40m\n",end='')
