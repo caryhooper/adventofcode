@@ -8,9 +8,9 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "day13.py",
+            "program": "day14.py",
             "console": "integratedTerminal",
-            "cwd": "/root/Documents/adventofcode/2021/13/"
+            "cwd": "/root/Documents/adventofcode/2021/14/"
         }
     ]
 }
