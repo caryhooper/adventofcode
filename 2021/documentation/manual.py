@@ -7,21 +7,23 @@ class Manual:
         self.pair_insertions = dict()
         self.polymer_template = ""
         self.step = 0
+        #Part 2 Data structures here
         self.letter_set = ""
         self.all_pairs_count = collections.Counter()
         self.letters_count = dict()
-        #Part2 
-        pass
 
     def parse_rules(self,lines):
         for line in lines:
             line = line.strip()
             if "->" in line:
+                #If -> exist, we have a pairing
                 pair,insert_letter = line.split(' -> ')
                 self.pair_insertions[pair] = insert_letter
             elif line == "":
+                #Blank line
                 pass
             else:
+                #First line is polymer template string
                 self.polymer_template = line
             
         #Initialize data structures for part 2
@@ -36,15 +38,19 @@ class Manual:
         #Count each letter in seed
         for i in self.polymer_template:
             self.letters_count[i] += 1
+        #Increment initial pairings found in polymer_template
         for i in range(0,len(self.polymer_template)-1):
             pair = self.polymer_template[i] + self.polymer_template[i+1]
             self.all_pairs_count[pair] += 1
 
     def do_steps(self,number_of_steps=100,do_better=False):
+        #Helper function to iterate number_of_steps times.
         for _ in range(0,number_of_steps):
             if do_better:
+                #Part 2
                 self.do_step_better()
             else:
+                #Part 1
                 self.do_step()
             self.step += 1
             
@@ -64,10 +70,7 @@ class Manual:
     def do_step_better(self):
         #For each step, we're no longer keeping track of the polymer_template string.
         #Instead, we'll update the all_pairs_count
-        if self.step <= 1:
-            from pprint import pprint
-            pprint(f"Step {self.step} All Pairs: {self.all_pairs_count}")
-            pprint(f"Step {self.step} All Letters: {self.letters_count}")
+        #Create temp variables to modify while we iterate
         temp_all_pairs_count = collections.Counter(self.all_pairs_count)
         temp_letters_count = dict(self.letters_count)
         # print(self.all_pairs_count)

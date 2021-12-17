@@ -1,5 +1,7 @@
 from os import closerange
-import numpy,sys
+import numpy,sys,math
+
+from numpy.core.numeric import full
 
 class Navigator:
 	def __init__(self):
@@ -17,6 +19,8 @@ class Navigator:
 		self.octopus_navigator = OctopusNavigator()
 		self.cave_graph = CaveGraph()
 		self.thermal_camera = ThermalCamera()
+		#Used with Day15
+		self.grid = DijkstraGrid()
 
 	def parse_movement_commands(self,text_list):
 		#Input a text list of newline-separated commands and \
@@ -257,6 +261,100 @@ class Navigator:
 				completion_string = [self.syntax_key[i] for i in progress ]
 				completion_strings.append(completion_string)
 		return completion_strings
+
+class DijkstraGrid:
+	#Find shortest path to adjacent nodes
+	#Need way to sort all DijkstraNode objects by cost
+	def initialize(self,lines, full_map=False):
+		grid_coords, self.x_max, self.y_max = self.load_chitons(lines,full_map)
+		self.grid = numpy.empty(grid_coords.shape,dtype=self.DijkstraNode)
+		for x in range(0,self.x_max):
+			for y in range(0,self.y_max):
+				self.grid[x,y] = self.DijkstraNode(x,y,grid_coords[x,y],self.x_max, self.y_max)
+		self.q = self.grid.flatten()
+		self.sort_queue()
+		self.visited = set()
+		self.start_node = self.grid[0,0]
+		self.end_node = self.grid[self.x_max - 1, self.y_max - 1]
+
+	def sort_queue(self):
+		self.q = sorted(self.q, key=lambda node: node.distance)
+
+	def find_shortest_path(self):
+		while len(self.q) > 0:
+			current_node = self.q.pop(0)
+			#calculate distances for each neighbor
+			self.visited.add(current_node)
+
+			for n_coord in current_node.neighbors:
+				#Filter node in queue that matches the neighbor coord (n_coord)
+				try:
+					n_node = list(filter(lambda node: node.coord == n_coord, self.q))[0]
+				except:
+					pass
+				# print(n_node)
+				#Calculate distance to neighbor via current_node
+				current_distance = current_node.distance + n_node.cost
+				if current_distance < n_node.distance:
+					#If shortest distance, update it.
+					n_node.distance = current_distance
+					n_node.path_via = current_node.coord
+			self.sort_queue()
+
+	def load_chitons(self,lines,full_map):
+		row_list = list()
+		for line in lines:
+			line = line.strip()
+			if line == "":
+				continue
+			row_list.append([i for i in line])
+		partial_grid = numpy.array(row_list,numpy.int32)
+		x_max = len(partial_grid[0])
+		y_max = len(partial_grid)
+		if not full_map:
+			return partial_grid, x_max, y_max
+		else:
+			full_grid = numpy.zeros((x_max*5,y_max*5))
+			for x in range(0,x_max*5):
+				for y in range(0,y_max*5):
+					added_val = math.floor(y / y_max) + math.floor(x / x_max)
+					preview_val = partial_grid[x % x_max,y % y_max] + added_val
+					if preview_val > 9:
+						preview_val -= 9
+					full_grid[x,y] = preview_val
+			return full_grid, x_max*5, y_max*5
+	
+	class DijkstraNode:
+		def __init__(self,x,y,cost,x_max,y_max):
+			self.visited = False
+			self.coord = (x,y)
+			self.path_via = (0,0)
+			self.cost = cost
+			self.x_max = x_max
+			self.y_max = y_max
+			self.neighbors = self.find_neighbors()
+
+			if (x,y) == (0,0):
+				self.distance = 0
+			else:
+				self.distance = sys.maxsize
+		
+		def mark_visited(self):
+			self.visited = True
+
+		
+		def find_neighbors(self):
+			neighbors = set()
+			x,y = self.coord
+			for i,j in [(0,1),(0,-1),(1,0),(-1,0)]:
+				if x+i == self.x_max or x + i < 0:
+					i = 0
+				if y+j == self.y_max or y + j < 0:
+					j = 0
+				neighbors.add((x + i,y + j))
+			neighbors.discard((x,y))
+			return neighbors
+
 
 class SevenSegmentDisplay:
 	def __init__(self):
