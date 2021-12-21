@@ -1,7 +1,5 @@
-**input.txt
 **input
 **/__pycache__/
 **launch.json
-**input[0-9]*.txt
-**input_test.txt
 **/.vscode/
+**.txt
