@@ -3,7 +3,7 @@
 import sys
 sys.path.append("..")
 
-import submarine
+import submarine, operator
 sub = submarine.Submarine()
 
 def bin2int(bitstring):
@@ -46,8 +46,10 @@ class Packet:
 		self.literal_value = 0
 		self.payload_length = 0
 		self.payload_quant = 0
-		self.bit_count = 3
+		self.bit_count = 0
 		self.parse()
+		self.version_sum = 0
+		self.total_value = 0
 
 	def parse(self):
 		#Parse Version
@@ -59,14 +61,14 @@ class Packet:
 		self.bit_count += 6
 		self.bitstring = self.bitstring[6:]
 		if self.type_id == 4:
-			self.is_literal == True
+			self.is_literal = True
 		else:
-			self.is_literal == False
+			self.is_literal = False
 
 		if self.is_literal:
-			remaining_size = len(self.bitstring[6:])
-			if remaining_size % 5 != 0:
-				print(f"Error with packet literal.  {remaining_size} bits remaining.")
+			# remaining_size = len(self.bitstring[6:])
+			# if remaining_size % 5 != 0:
+			# 	print(f"Error with packet literal.  {remaining_size} bits remaining.")
 
 			
 			#Process rest of five-bit numbers within.
@@ -83,7 +85,8 @@ class Packet:
 			#Type is operator packet... this is where the fun begins. 
 			lengthtypeid = self.bitstring[0]
 			self.bitstring = self.bitstring[1:]
-			if lengthtypeid == 1:
+			self.bit_count += 1 
+			if lengthtypeid == '1':
 				#Represents number of sub-packets
 				#11 bits representing number of sub-packets
 				lengthbits = self.bitstring[0:11]
@@ -108,16 +111,92 @@ class Packet:
 					p = Packet(self.bitstring)
 					self.bit_count += p.bit_count
 					self.packets.append(p)
-					self.bitstring = self.bitstring[p.bit_count]
+					self.bitstring = self.bitstring[p.bit_count:]
 					self.payload_length -= p.bit_count
+					
+					if "".join(set(self.bitstring)) == '0':
+						remaining_zeros = len(self.bitstring)
+						self.payload_length -= remaining_zeros
+						self.bit_count += remaining_zeros
+						self.bitstring = self.bitstring[remaining_zeros:]
 
 	def bin2int(self,bitstring):
 		#input a string of 1s and 0s, output an int
 		return int(bitstring,2)
+	
+	def find_version_sum(self):
+		self.version_sum += self.version
+		for p in self.packets:
+			vs = p.find_version_sum()
+			self.version_sum += vs
+		return self.version_sum
 
-file = open('input_op1.txt','r')
+	def calculate_value(self):
+		self.total_value = 0
+		if not self.is_literal:
+			#Recurse if there is an operator packet
+			# for p in self.packets:
+			if self.type_id == 0:
+				op = operator.add
+			elif self.type_id == 1:
+				op = operator.mul
+			elif self.type_id == 2:
+				#minimum
+				pass
+			elif self.type_id == 3:
+				#maximum
+				pass
+			elif self.type_id == 4:
+				#Packet Literal
+				self.total_value = p.literal_value
+			elif self.type_id == 5:
+				op = operator.gt
+			elif self.type_id == 6:
+				op = operator.lt
+			else:
+				#Type ID 7
+				op = operator.eq
+
+			if self.type_id in [0,1]:
+				if self.type_id == 1:
+					self.total_value += 1
+				for p in self.packets:
+					p.calculate_value()
+					val = p.total_value
+					self.total_value = op(self.total_value,val)
+			if self.type_id in [2,3]:
+				all_values = list()
+				for p in self.packets:
+					p.calculate_value()
+					val = p.total_value
+					all_values.append(val)
+				if self.type_id == 3:
+					self.total_value = max(all_values)
+				else:
+					self.total_value = min(all_values)
+				
+			if self.type_id in [5,6,7]:
+				p1,p2 = self.packets
+				p1.calculate_value()
+				p2.calculate_value()
+				result = op(p1.total_value,p2.total_value)
+				if result:
+					self.total_value = 1
+				else:
+					self.total_value = 0
+		else:
+			self.total_value =  self.literal_value
+
+#Part 1
+file = open('input.txt','r')
 input_string = file.read().strip()
 d = Decoder(input_string)
 p = d.parse_packets()
 
 print(f"The remaining bitstream is: {p.bitstring}")
+
+print(f"The version sum for all packets is {p.find_version_sum()}")
+
+#Part 2
+p.calculate_value()
+print(f"The total value of the packets is {p.total_value}")

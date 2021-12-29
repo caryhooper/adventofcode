@@ -6,6 +6,7 @@ sys.path.append("..")
 import submarine
 sub = submarine.Submarine()
 
+#Part 1 - trick shot
 file = open('input.txt','r')
 cannon = sub.weapons["probe_cannon"]
 cannon.parse_target_area(file.readlines())
@@ -40,4 +41,19 @@ while velocity[1] < 200:
 
 # Max y was 5778 with velocity (18, 107)
 print(f"Max y was {greatest_y} with velocity {greatest_y_velocity}")
+
+
+
+#Part 2 - brute force
+#2535 too low
+#2576
+success_velocities = set()
+for x in range(0,300):
+    for y in range(-200,508):
+        velocity = (x,y)
+        success,_,_,_ = cannon.fire(velocity)
+        if success:
+            success_velocities.add(velocity)
+
+print(f"There are {len(success_velocities)} distinct integer velocities to successfully land the probe.")
 

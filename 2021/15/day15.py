@@ -15,7 +15,7 @@ sub.navigator.grid.initialize(file.readlines(),full_map = True)
 sub.navigator.grid.find_shortest_path()
 end = sub.navigator.grid.end_node
 sp = end.distance
-print(f"The shortest path is {sp} to {end}")
+print(f"The shortest path is {sp} to {end.coord}")
 file.close()
 
 
