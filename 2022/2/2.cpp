@@ -191,4 +191,5 @@ int main(){
     std::cout << "The total score with the initial strategy is: " << total_score << "\n";
 
     std::cout << "The total score with the Part 2 strategy is: " << total_part2_score << "\n";
+    return 0;
 }
