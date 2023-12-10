@@ -9,6 +9,7 @@
 #include <cassert>
 #include <map>
 #include <limits>
+#include <numeric>
 #include "../helpers.hpp"
 
 using namespace advent_of_code;
@@ -39,9 +40,9 @@ class DirectionalBigraph{
         }
 
         DirectionalBigraphNode * get_node_from_id(std::string lookup_id){
-            for(auto const [id, node] : node_lookup_){
-                if(id.compare(lookup_id) == 0){
-                    return node;
+            for( std::pair<std::string,DirectionalBigraphNode *> map_val : node_lookup_){
+                if(map_val.first.compare(lookup_id) == 0){
+                    return map_val.second;
                 }
             }
             std::cout << "Node with ID " << lookup_id << " not found!" << std::endl;
@@ -49,9 +50,9 @@ class DirectionalBigraph{
         }
 
         void resolve_references(){
-            for(auto const [id, node]  : node_lookup_){
-                node->left_ = get_node_from_id(node->left_id_);
-                node->right_ = get_node_from_id(node->right_id_);
+            for(std::pair<std::string,DirectionalBigraphNode *> map_val  : node_lookup_){
+                map_val.second->left_ = get_node_from_id(map_val.second->left_id_);
+                map_val.second->right_ = get_node_from_id(map_val.second->right_id_);
             }
         }
 
@@ -88,33 +89,87 @@ class DirectionalBigraph{
             return true;
         }
 
-        unsigned long long navigate_graph_as_ghost(std::string directions){
-            std::vector<DirectionalBigraphNode *> current_nodes;
-            unsigned long long steps = 0;
-            size_t directions_len = directions.size();
-            for(auto const [id, node] : node_lookup_){
-                if(id[2] == 'A'){
-                    current_nodes.push_back(node);
+        bool is_in_vector(DirectionalBigraphNode * needle, std::vector<DirectionalBigraphNode *> haystack){
+            for(DirectionalBigraphNode *  node : haystack){
+                if(needle == node){
+                    return true;
                 }
             }
-            size_t nodes_len = current_nodes.size();
-            std::cout << "Walking the graph with " << nodes_len << " nodes." << std::endl;
+            return false;
+        }
 
-            while(!all_nodes_at_end(current_nodes)){
-                char c = directions[steps % directions_len];
-                assert(c == 'L' || c == 'R');
-                steps += 1;
+        size_t get_period(DirectionalBigraphNode * start, std::string directions){
+            DirectionalBigraphNode * current_node = start;
+            size_t steps = 0;;
+            size_t directions_len = directions.size();
+            size_t offset = steps % directions_len;
+
+            do{
+                char c = directions[offset];
+
                 if(c == 'L'){//L
-                    for(int i = 0; i < (int) nodes_len; i++){
-                        current_nodes[i] = current_nodes[i]->left_;
-                    }
-                } else { //R
-                    for(int i = 0; i < (int) nodes_len; i++){
-                        current_nodes[i] = current_nodes[i]->right_;
-                    }
+                    steps += 1;
+                    current_node = current_node->left_;
+                } else if (c == 'R'){ //R
+                    steps += 1;
+                    current_node = current_node->right_;
+                } else {
+                    std::cout << "Error reading character from directions: " << c << std::endl;
+                }
+                offset = steps % directions_len;
+
+            }while(current_node != start || offset != 0);
+            size_t period = steps / directions_len;
+            return period;
+        }
+
+        void get_dists(DirectionalBigraphNode * start,std::string directions, std::vector<size_t>& dists){
+            size_t steps = 0;
+            DirectionalBigraphNode * current_node = start;
+            std::vector<DirectionalBigraphNode *> ends;
+            for(std::pair<std::string,DirectionalBigraphNode *> this_pair : node_lookup_){
+                if(this_pair.first[2] == 'Z'){
+                    ends.push_back(this_pair.second);
                 }
             }
-            return steps;
+            size_t ends_len = ends.size();
+            size_t directions_len = directions.size();
+            while(ends_len != 0){
+                char c = directions[steps % directions_len];
+                if(is_in_vector(current_node, ends)){
+                    ends_len -= 1;
+                    dists.push_back(steps / directions_len);
+                }
+
+                if(c == 'L'){//L
+                    steps += 1;
+                    current_node = current_node->left_;
+                } else if (c == 'R'){ //R
+                    steps += 1;
+                    current_node = current_node->right_;
+                } else {
+                    std::cout << "Error reading character from directions: " << c << std::endl;
+                }
+            }
+        }
+
+        size_t navigate_graph_as_cyclic_ghost(std::string directions){
+            //size_t period = 0; 
+            //size_t distance_to_end = 0;
+            std::vector<size_t> all_dists;
+            
+            for(std::pair<std::string,DirectionalBigraphNode *> this_pair : node_lookup_){
+                if(this_pair.first[2] == 'A'){
+                    //period = get_period(this_pair.second, directions);
+                    get_dists(this_pair.second, directions, all_dists );
+                }
+
+            }
+            size_t lcm = 1;
+            for(size_t dist : all_dists){
+                lcm = std::lcm(lcm, dist);
+            }
+            return lcm;
         }
 
         std::map<std::string, DirectionalBigraphNode *> node_lookup_;
@@ -124,7 +179,7 @@ class DirectionalBigraph{
 int main(){
     //Haunted Wasteland
     size_t steps  = 0;
-    unsigned long long ghost_steps = 0;
+    size_t ghost_steps = 0;
     std::string filename = "8/input.txt";
 
     std::ifstream input_file(filename);
@@ -147,7 +202,9 @@ int main(){
     steps = graph.navigate_graph("AAA","ZZZ",directions);
 
     std::cout << "The final result for Part 1 is: " << steps << std::endl;
-    ghost_steps = graph.navigate_graph_as_ghost(directions);
+    //ghost_steps = graph.navigate_graph_as_ghost(directions);
+    ghost_steps = graph.navigate_graph_as_cyclic_ghost(directions);
+    
     std::cout << "The final result for Part 2 is: " << ghost_steps << std::endl;
 
 

@@ -52,6 +52,7 @@ namespace advent_of_code
         }
         return -1;
     }
+
     size_t strtoul(std::string result){
         return std::strtoul(result.c_str(), NULL, 10);
     }
