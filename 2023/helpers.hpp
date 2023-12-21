@@ -11,12 +11,12 @@
 namespace advent_of_code
 {
     void trim_r(std::string& input, char c = ' '){
-        while(input[input.size() - 1] == ' '){
+        while(input[input.size() - 1] == c){
             input.erase(input.size()-1,std::string::npos);
         }
     }
     void trim_l(std::string& input, char c = ' '){
-        while(input[0] == ' '){
+        while(input[0] == c){
             input.erase(0,1);
         }
     }
