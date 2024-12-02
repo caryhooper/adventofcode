@@ -1,51 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"hoop/parser"
 	"log"
 	"math"
-	"os"
 	"sort"
-	"strconv"
-	"strings"
 )
-
-func readLinesFromFile(filename string) []string {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var numLines int = 0
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	lines := make([]string, 0, 1024)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-		numLines += 1
-	}
-	return lines
-}
-
-func splitLinesIntoColumns(lines []string, numColumns int) [][]int {
-	var returnedArrays [][]int = make([][]int, 0)
-	for range numColumns {
-		returnedArrays = append(returnedArrays, make([]int, 0))
-	}
-	for index := range len(lines) {
-		fields := strings.Fields(lines[index])
-		for i := range len(fields) {
-			stringValue, err := strconv.Atoi(fields[i])
-			if err != nil {
-				log.Fatal(err)
-			}
-			returnedArrays[i] = append(returnedArrays[i], stringValue)
-		}
-	}
-	return returnedArrays
-}
 
 func calculateDistance(col1 []int, col2 []int) int {
 	if len(col1) != len(col2) {
@@ -111,13 +72,13 @@ func calculateSimilarityScore(col1 []int, col2 []int) int {
 
 func main() {
 	fmt.Println("hello world")
-	lines := readLinesFromFile("input")
+	lines := parser.ReadLinesFromFile("input")
 
 	for index := range len(lines) {
 		fmt.Println(lines[index])
 	}
 	var numColumns int = 2
-	var columns [][]int = splitLinesIntoColumns(lines, numColumns)
+	var columns [][]int = parser.SplitLinesIntoColumns(lines, numColumns)
 
 	var col1 []int = columns[0]
 	var col2 []int = columns[1]
