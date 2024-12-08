@@ -26,6 +26,28 @@ func ReadLinesFromFile(filename string) []string {
 	return lines
 }
 
+func SplitLinesInto2DArray(lines []string) [][]rune {
+	//find longest row
+	var returnedArrays [][]rune = make([][]rune, 0)
+	var longestRow int = 0
+	for index := range len(lines) {
+		if len(lines[index]) > longestRow {
+			longestRow = len(lines[index])
+		}
+	}
+	//initialize returned double rune array
+	for range len(lines) {
+		returnedArrays = append(returnedArrays, make([]rune, longestRow))
+	}
+	//populate returnedArrays
+	for index := range len(lines) {
+		runeArray := []rune(lines[index])
+		returnedArrays[index] = runeArray
+	}
+
+	return returnedArrays
+}
+
 func SplitLinesIntoRows(lines []string, numRows int) [][]int {
 	var returnedArrays [][]int = make([][]int, 0)
 	for range numRows {
